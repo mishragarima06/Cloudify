@@ -140,7 +140,7 @@ export default function RegisterPage() {
     setLoading(true)
 
     try {
-      const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000'
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000'
 
       // Sanitize inputs before sending to API
       const sanitizedName = sanitizeInput(name)
@@ -154,25 +154,19 @@ export default function RegisterPage() {
         password
       })
 
-      console.log('RegisterPage: Registration successful')
-
       // Handle 2FA requirement
       if (data.requires2FA && data.tempToken) {
         sessionStorage.setItem('tempToken', data.tempToken)
-        console.log('RegisterPage: 2FA required, redirecting to /verify')
         navigate('/verify', { replace: true })
       }
       // Handle direct registration (no 2FA)
       else if (data.token && data.user) {
-        console.log('RegisterPage: Direct registration successful')
-
         // Store token in localStorage for persistence
         localStorage.setItem('cf_token', data.token)
 
         // Update AuthContext with user and token
-        login(data.user, data.token)
+        login(data.token, data.user)
 
-        console.log('RegisterPage: Redirecting to /dashboard')
         navigate('/dashboard', { replace: true })
       } else {
         setError('Invalid response from server')

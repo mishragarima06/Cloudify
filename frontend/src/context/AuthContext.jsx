@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState } from 'react'
 import axios from 'axios'
 
-axios.defaults.baseURL = process.env.REACT_APP_API_URL || 'http://localhost:5000'
+axios.defaults.baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000'
 
 const AuthContext = createContext(null)
 
@@ -10,6 +10,23 @@ export function AuthProvider({ children }) {
   const [user, setUser]   = useState(() => {
     try { return JSON.parse(localStorage.getItem('cf_user')) } catch { return null }
   })
+  const [loading, setLoading] = useState(true)
+
+  React.useEffect(() => {
+    // Check if user data exists in localStorage on app load
+    const storedToken = localStorage.getItem('cf_token')
+    const storedUser = localStorage.getItem('cf_user')
+    if (storedToken && storedUser) {
+      try {
+        setUser(JSON.parse(storedUser))
+        setToken(storedToken)
+      } catch (e) {
+        localStorage.removeItem('cf_user')
+        localStorage.removeItem('cf_token')
+      }
+    }
+    setLoading(false)
+  }, [])
 
   axios.interceptors.request.use(cfg => {
     const t = localStorage.getItem('cf_token')
@@ -32,10 +49,16 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ token, user, login, logout, isAuth: !!token }}>
+    <AuthContext.Provider value={{ token, user, login, logout, isAuth: !!token, loading }}>
       {children}
     </AuthContext.Provider>
   )
 }
 
-export const useAuth = () => useContext(AuthContext)
+export const useAuth = () => {
+  const context = useContext(AuthContext)
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider')
+  }
+  return context
+}
