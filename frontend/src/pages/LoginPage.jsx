@@ -1,7 +1,6 @@
 import React, { useState, useCallback } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { useAuth } from '../context/AuthContext'
-import axios from 'axios'
+import { useAuth, apiClient } from '../context/AuthContext'
 
 const s = {
   page: {
@@ -107,9 +106,7 @@ export default function LoginPage() {
     setLoading(true)
 
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000'
-
-      const { data } = await axios.post(`${apiUrl}/api/auth/login`, {
+      const { data } = await apiClient.post('/api/auth/login', {
         email: email.trim(),
         password
       })

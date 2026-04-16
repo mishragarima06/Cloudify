@@ -3,6 +3,7 @@ import axios from 'axios'
 import Sidebar from '../components/Sidebar'
 import UploadZone from '../components/UploadZone'
 import FileCard from '../components/FileCard'
+import { smartSearch } from '../services/aiServices'
 
 const CATEGORY_FILTERS = ['All', 'Document', 'Image', 'Code', 'Spreadsheet', 'Archive', 'Other']
 
@@ -20,6 +21,9 @@ export default function Dashboard() {
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState('All')
   const [activeTab, setActiveTab] = useState('My files')
+  // Search state:
+  const [searchResults, setSearchResults] = useState(null)
+  const [aiSearching, setAiSearching] = useState(false)
 
   const fetchFiles = async () => {
     try {
@@ -50,14 +54,26 @@ export default function Dashboard() {
 
   // Fetch files on component mount
   useEffect(() => {
-    fetchFiles()
-  }, [])
+    if (!search.trim()) {
+      setSearchResults(null)
+      return
+    }
+
+    const timer = setTimeout(async () => {
+      setAiSearching(true)
+      const results = await smartSearch(search, files)
+      setSearchResults(results)
+      setAiSearching(false)
+    }, 400) // 400ms wait karo typing stop hone ke baad
+
+    return () => clearTimeout(timer)
+  }, [search, files])
 
   // Filter files based on search and category
-  const filtered = files.filter(f => {
-    const matchSearch = f.name?.toLowerCase().includes(search.toLowerCase())
+  // Display:
+  const filtered = searchResults ?? files.filter(f => {
     const matchFilter = filter === 'All' || f.category?.toLowerCase() === filter.toLowerCase()
-    return matchSearch && matchFilter
+    return matchFilter
   })
 
   const usedPct = Math.min(Math.round((stats.usedBytes / (5 * 1024 ** 3)) * 100), 100)

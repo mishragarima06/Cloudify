@@ -1,7 +1,6 @@
 import React, { useState, useCallback } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { useAuth } from '../context/AuthContext'
-import axios from 'axios'
+import { useAuth, apiClient } from '../context/AuthContext'
 
 const s = {
   page: {
@@ -140,15 +139,13 @@ export default function RegisterPage() {
     setLoading(true)
 
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000'
-
       // Sanitize inputs before sending to API
       const sanitizedName = sanitizeInput(name)
       const sanitizedEmail = sanitizeInput(email)
 
       console.log('RegisterPage: Attempting signup')
 
-      const { data } = await axios.post(`${apiUrl}/api/auth/register`, {
+      const { data } = await apiClient.post('/api/auth/register', {
         name: sanitizedName,
         email: sanitizedEmail,
         password
