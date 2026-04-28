@@ -13,6 +13,7 @@ const NAV = [
 export default function Sidebar({ activeTab, onTabChange }) {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
+  const [hoveredNav, setHoveredNav] = React.useState(null)
 
   const initials = (user?.name || 'U').split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase()
 
@@ -36,16 +37,22 @@ export default function Sidebar({ activeTab, onTabChange }) {
         {NAV.map(item => {
           const isActive = activeTab === item.label.toLowerCase().replace(' ', '-')
             || (item.label === 'My files' && !activeTab)
+          const isHovered = hoveredNav === item.label
           return (
             <div
               key={item.label}
-              onClick={() => onTabChange && onTabChange(item.label)}
+              onClick={() => {
+                onTabChange?.(item.label)
+                navigate(item.path)
+              }}
+              onMouseEnter={() => setHoveredNav(item.label)}
+              onMouseLeave={() => setHoveredNav(null)}
               style={{
                 display: 'flex', alignItems: 'center', gap: 9,
                 padding: '8px 10px', borderRadius: 8, marginBottom: 2,
                 cursor: 'pointer', fontSize: 13, fontWeight: isActive ? 500 : 400,
                 color: isActive ? 'var(--blue-dark)' : 'var(--text-sub)',
-                background: isActive ? 'var(--blue-light)' : 'transparent',
+                background: isActive ? 'var(--blue-light)' : isHovered ? 'rgba(59, 130, 246, 0.08)' : 'transparent',
                 transition: 'all 0.12s'
               }}
             >
@@ -79,7 +86,20 @@ export default function Sidebar({ activeTab, onTabChange }) {
           style={{
             width: '100%', padding: '7px', fontSize: 12,
             border: '0.5px solid var(--gray-border)', borderRadius: 7,
-            background: 'transparent', color: 'var(--red)', cursor: 'pointer'
+            background: 'transparent', color: 'var(--red)', cursor: 'pointer',
+            transition: 'all 0.2s',
+            ':hover': {
+              background: 'rgba(239, 68, 68, 0.08)',
+              borderColor: 'var(--red)'
+            }
+          }}
+          onMouseEnter={(e) => {
+            e.target.style.background = 'rgba(239, 68, 68, 0.08)'
+            e.target.style.borderColor = 'var(--red)'
+          }}
+          onMouseLeave={(e) => {
+            e.target.style.background = 'transparent'
+            e.target.style.borderColor = 'var(--gray-border)'
           }}
         >
           Logout

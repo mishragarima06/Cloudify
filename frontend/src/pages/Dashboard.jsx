@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import axios from 'axios'
+import { useSearchParams } from 'react-router-dom'
+import { apiClient } from '../context/AuthContext'
 import Sidebar from '../components/Sidebar'
 import UploadZone from '../components/UploadZone'
 import FileCard from '../components/FileCard'
@@ -14,35 +16,58 @@ function fmtBytes(b) {
 }
 
 export default function Dashboard() {
+  const [searchParams, setSearchParams] = useSearchParams()
   const [files, setFiles] = useState([])
   const [stats, setStats] = useState({ total: 0, usedBytes: 0, shared: 0 })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState('All')
-  const [activeTab, setActiveTab] = useState('My files')
+  const [activeTab, setActiveTab] = useState(() => {
+    // Read tab from URL query parameter
+    const tabParam = searchParams.get('tab')
+    const tabMap = { shared: 'Shared', recent: 'Recent', starred: 'Starred', trash: 'Trash' }
+    return tabMap[tabParam] || 'My files'
+  })
   // Search state:
   const [searchResults, setSearchResults] = useState(null)
   const [aiSearching, setAiSearching] = useState(false)
 
+  // Update URL when tab changes
+  useEffect(() => {
+    if (activeTab === 'My files') {
+      setSearchParams({})
+    } else {
+      const tabParam = activeTab.toLowerCase().replace(' ', '-')
+      setSearchParams({ tab: tabParam })
+    }
+  }, [activeTab, setSearchParams])
+
+  // Read URL and update activeTab when URL changes
+  useEffect(() => {
+    const tabParam = searchParams.get('tab')
+    const tabMap = { shared: 'Shared', recent: 'Recent', starred: 'Starred', trash: 'Trash' }
+    const newTab = tabMap[tabParam] || 'My files'
+    setActiveTab(newTab)
+  }, [searchParams])
+
   const fetchFiles = async () => {
     try {
       setError('')
-      const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000'
-      const { data } = await axios.get(`${apiUrl}/api/files`)
+      const { data } = await apiClient.get('/api/files')
       
       setFiles(Array.isArray(data.files) ? data.files : [])
       setStats(data.stats || { total: 0, usedBytes: 0, shared: 0 })
     } catch (err) {
       console.error('Dashboard: Error fetching files:', err)
       
-      let errorMsg = 'Files load nahi ho sake'
+      let errorMsg = 'Files cannot be loaded.'
       if (!err.response) {
         errorMsg = 'Network error - internet check karo'
       } else if (err.response.status === 401) {
         errorMsg = 'Session expire ho gaya'
       } else if (err.response.status >= 500) {
-        errorMsg = 'Server error - baad mein try karo'
+        errorMsg = 'Server error - try again later '
       }
       
       setError(errorMsg)
@@ -53,6 +78,10 @@ export default function Dashboard() {
   }
 
   // Fetch files on component mount
+  useEffect(() => {
+    fetchFiles()
+  }, [])
+
   useEffect(() => {
     if (!search.trim()) {
       setSearchResults(null)

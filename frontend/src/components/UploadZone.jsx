@@ -1,7 +1,7 @@
 // src/components/UploadZone.jsx — Complete Updated Version
 
 import React, { useState, useRef } from 'react'
-import axios from 'axios'
+import { apiClient } from '../context/AuthContext'
 import { runAIPipeline } from "../services/aiServices";
 
 export const CATEGORY_STYLE = {
@@ -84,7 +84,8 @@ export default function UploadZone({ onUploaded, userPlan = 'free' }) {
       }))
 
       setStep('upload')
-      const { data } = await axios.post('/api/files/upload', form, {
+      const { data } = await apiClient.post('/api/files/upload', form, {
+        headers: { 'Content-Type': 'multipart/form-data' },
         onUploadProgress: e => {
           // Real upload progress (90-99% ke beech)
           const realPct = 90 + Math.round((e.loaded / e.total) * 9)

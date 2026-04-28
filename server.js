@@ -16,6 +16,18 @@ const setCORSHeaders = (res) => {
   res.setHeader('Content-Type', 'application/json')
 }
 
+const express = require("express");
+const cors = require("cors");
+
+const app = express();
+
+app.use(cors({
+  origin: "http://localhost:5174",  // your frontend
+  credentials: true                // if using cookies/token
+}));
+
+app.use(express.json());
+
 // Parse JSON body
 const parseBody = (req) => {
   return new Promise((resolve, reject) => {
