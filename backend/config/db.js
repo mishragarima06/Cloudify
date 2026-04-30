@@ -1,50 +1,47 @@
 const mongoose = require("mongoose");
 
+// Global flag to track DB state
+global.isInMemoryDB = false;
+
 const connectDB = async () => {
-  // Primary: Try SRV connection string
   const srvUri = process.env.MONGO_URI;
-
-  // Fallback: Direct connection bypassing DNS SRV lookup
-  const directUri =
-    "mongodb://garimachmishra_db_user:garima123@ac-n9wd3bw-shard-00-00.bt1nipw.mongodb.net:27017,ac-n9wd3bw-shard-00-01.bt1nipw.mongodb.net:27017,ac-n9wd3bw-shard-00-02.bt1nipw.mongodb.net:27017/?authSource=admin&replicaSet=atlas-p4xdn8-shard-0&ssl=true&appName=Cluster0";
-
+  
   const options = {
-    serverSelectionTimeoutMS: 8000,
+    serverSelectionTimeoutMS: 5000, // Faster timeout for quicker fallback
     connectTimeoutMS: 10000,
   };
 
-  // Try SRV first
-  try {
-    const conn = await mongoose.connect(srvUri, options);
-    console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
-    return;
-  } catch (srvError) {
-    console.warn(`⚠️  SRV connection failed: ${srvError.message}`);
-    console.log("🔄 Trying direct connection to Atlas shards...");
+  if (!srvUri) {
+    console.warn("⚠️  MONGO_URI not found in .env. Skipping Atlas connection.");
+  } else {
+    try {
+      console.log("🔄 Connecting to MongoDB Atlas...");
+      const conn = await mongoose.connect(srvUri, options);
+      console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
+      global.isInMemoryDB = false;
+      return;
+    } catch (srvError) {
+      console.warn(`⚠️  Atlas connection failed: ${srvError.message}`);
+    }
   }
 
-  // Try direct connection (bypasses DNS SRV lookup)
+  // Fallback to In-Memory MongoDB
   try {
-    const conn = await mongoose.connect(directUri, options);
-    console.log(`✅ MongoDB Connected (direct): ${conn.connection.host}`);
-    return;
-  } catch (directError) {
-    console.error(`❌ Direct connection also failed: ${directError.message}`);
-    console.error("💡 FIX REQUIRED: Go to MongoDB Atlas → Security → Network Access");
-    console.error("   → Add your current IP address (or 0.0.0.0/0 for dev)");
-    console.log("⚠️  Starting in-memory MongoDB so app stays running...");
-  }
-
-  // Last resort: in-memory MongoDB so rest of the app works
-  try {
+    console.log("🔄 Starting In-Memory MongoDB fallback...");
     const { MongoMemoryServer } = require("mongodb-memory-server");
     const mongoServer = await MongoMemoryServer.create();
     const mongoUri = mongoServer.getUri();
+    
     await mongoose.connect(mongoUri);
+    global.isInMemoryDB = true;
+    
+    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     console.log(`✅ In-Memory MongoDB started: ${mongoUri}`);
-    console.log("⚠️  NOTE: Data will NOT persist. Fix Atlas IP whitelist for real data.");
+    console.log("⚠️  WARNING: Data will NOT persist across restarts!");
+    console.log("⚠️  Fix your Atlas IP whitelist to use real database.");
+    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
   } catch (fallbackError) {
-    console.error(`❌ In-Memory MongoDB also failed: ${fallbackError.message}`);
+    console.error(`❌ CRITICAL: In-Memory MongoDB also failed: ${fallbackError.message}`);
     process.exit(1);
   }
 };

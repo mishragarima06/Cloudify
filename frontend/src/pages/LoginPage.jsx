@@ -68,8 +68,16 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [errors, setErrors] = useState({})
+  const { login, isAuth } = useAuth()
   const navigate = useNavigate()
-  const { login } = useAuth()
+
+  // Redirect if already logged in
+  React.useEffect(() => {
+    if (isAuth) {
+      console.log('LoginPage: User already authenticated, redirecting...')
+      navigate('/dashboard', { replace: true })
+    }
+  }, [isAuth, navigate])
 
   // Email validation regex
   const validateEmail = (email) => {

@@ -15,7 +15,9 @@ const generateToken = (id) => {
 const register = async (req, res) => {
   try {
     const { name, email, password } = req.body;
-    console.log(`📝 Registration attempt for: ${email}`);
+    const cleanEmail = email.trim().toLowerCase();
+    
+    console.log(`📝 Registration attempt for: ${cleanEmail}`);
 
     if (!name || !email || !password) {
       return res.status(400).json({ message: "Please fill all fields" });
@@ -23,13 +25,13 @@ const register = async (req, res) => {
 
     // Check if email already exists
     try {
-      const existingUser = await User.findOne({ email });
+      const existingUser = await User.findOne({ email: cleanEmail });
       if (existingUser) {
-        console.log(`⚠️  Registration failed: Email ${email} already exists`);
+        console.log(`⚠️  Registration failed: Email ${cleanEmail} already exists`);
         return res.status(409).json({ message: "Email already registered" });
       }
     } catch (dbError) {
-      console.log("⚠️  Database not available for findOne, using mock mode");
+      console.log("⚠️  Database not available for findOne, check if connection is active");
     }
 
     const salt = await bcrypt.genSalt(10);
@@ -42,13 +44,13 @@ const register = async (req, res) => {
     try {
       const user = await User.create({
         name,
-        email,
+        email: cleanEmail,
         password: hashedPassword,
         otp,
         otpExpires,
       });
 
-      console.log(`\n📧 OTP for ${email}: ${otp}\n`);
+      console.log(`\n📧 OTP for ${cleanEmail}: ${otp}\n`);
 
       // Send actual email
       try {
@@ -88,7 +90,9 @@ const register = async (req, res) => {
         tempToken,
       });
     } catch (dbError) {
-      console.error("⚠️  Database error during User.create:", dbError);
+      console.error("⚠️  Database error during User.create:", dbError.message);
+      
+      // If DB failed, we can't save the user, so "mock mode" is just for UI testing
       const mockUserId = "123456789012345678901234";
       const tempToken = jwt.sign(
         { id: mockUserId, is2FATemp: true },
@@ -96,10 +100,10 @@ const register = async (req, res) => {
         { expiresIn: "10m" }
       );
 
-      console.log(`\n📧 MOCK OTP for ${email}: 123456\n`);
+      console.log(`\n📧 MOCK OTP for ${cleanEmail}: 123456\n`);
 
       res.status(201).json({
-        message: "Registration successful (mock mode). Please verify OTP.",
+        message: "Registration successful (mock mode). User was NOT saved to DB.",
         requires2FA: true,
         tempToken,
       });
@@ -112,24 +116,32 @@ const register = async (req, res) => {
 const login = async (req, res) => {
   try {
     const { email, password } = req.body;
+    const dbType = global.isInMemoryDB ? "In-Memory" : "Atlas";
+    
+    console.log(`🔐 Login attempt for: ${email} (${dbType} DB)`);
 
     if (!email || !password) {
       return res.status(400).json({ message: "Please provide email and password" });
     }
 
     try {
-      const user = await User.findOne({ email });
+      // Find user with case-insensitive email
+      const user = await User.findOne({ email: email.trim().toLowerCase() });
+      
       if (!user) {
-        return res.status(401).json({ message: "Invalid email or password" });
+        console.log(`❌ Login failed: User ${email} not found in ${dbType} DB`);
+        let extra = global.isInMemoryDB ? " (Note: DB was recently restarted, you might need to Register again)" : "";
+        return res.status(401).json({ message: "Invalid email or password" + extra });
       }
 
       const isMatch = await bcrypt.compare(password, user.password);
       if (!isMatch) {
+        console.log(`❌ Login failed: Incorrect password for ${email}`);
         return res.status(401).json({ message: "Invalid email or password" });
       }
 
       if (user.isTwoFactorEnabled) {
-        // Issue a short-lived temp token containing the userId
+        console.log(`ℹ️  2FA required for ${email}`);
         const tempToken = jwt.sign(
           { id: user._id, is2FATemp: true },
           process.env.JWT_SECRET,
@@ -142,14 +154,17 @@ const login = async (req, res) => {
         });
       }
 
+      console.log(`✅ Login successful for ${email}`);
       res.status(200).json({
         message: "Login successful",
         user: { id: user._id, name: user.name, email: user.email },
         token: generateToken(user._id),
       });
     } catch (dbError) {
-      // Mock response for development
-      console.log("⚠️  Database not available, using mock login");
+      console.error(`❌ Database error during login for ${email}:`, dbError.message);
+      
+      // True mock mode only if DB is completely unavailable
+      console.log("⚠️  Falling back to total mock mode (dangerous)");
       const mockUserId = "mock_user_" + email.replace(/[^a-z0-9]/g, '');
       res.status(200).json({
         message: "Login successful (mock mode)",
