@@ -14,6 +14,7 @@ const { protect } = require("../middleware/authMiddleware");
 router.post("/register", register);
 router.post("/login", login);
 router.post("/2fa/verify", verify2FA);
+router.post("/verify-otp", verify2FA); // alias used by OTPPage frontend
 
 router.get("/me", protect, getMe);
 router.post("/logout", protect, logout);

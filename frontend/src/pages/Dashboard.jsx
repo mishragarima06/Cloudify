@@ -24,12 +24,10 @@ export default function Dashboard() {
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState('All')
   const [activeTab, setActiveTab] = useState(() => {
-    // Read tab from URL query parameter
     const tabParam = searchParams.get('tab')
     const tabMap = { shared: 'Shared', recent: 'Recent', starred: 'Starred', trash: 'Trash' }
     return tabMap[tabParam] || 'My files'
   })
-  // Search state:
   const [searchResults, setSearchResults] = useState(null)
   const [aiSearching, setAiSearching] = useState(false)
 
@@ -55,21 +53,30 @@ export default function Dashboard() {
     try {
       setError('')
       const { data } = await apiClient.get('/api/files')
-      
-      setFiles(Array.isArray(data.files) ? data.files : [])
-      setStats(data.stats || { total: 0, usedBytes: 0, shared: 0 })
+
+      const fileList = Array.isArray(data.files) ? data.files : []
+      setFiles(fileList)
+
+      // Compute stats from returned data
+      const totalBytes = fileList.reduce((sum, f) => sum + (f.size || 0), 0)
+      const sharedCount = fileList.filter(f => f.sharedWith && f.sharedWith.length > 0).length
+      setStats({
+        total: data.count ?? fileList.length,
+        usedBytes: data.stats?.usedBytes ?? totalBytes,
+        shared: data.stats?.shared ?? sharedCount,
+      })
     } catch (err) {
       console.error('Dashboard: Error fetching files:', err)
-      
+
       let errorMsg = 'Files cannot be loaded.'
       if (!err.response) {
         errorMsg = 'Network error - internet check karo'
       } else if (err.response.status === 401) {
         errorMsg = 'Session expire ho gaya'
       } else if (err.response.status >= 500) {
-        errorMsg = 'Server error - try again later '
+        errorMsg = 'Server error - try again later'
       }
-      
+
       setError(errorMsg)
       setFiles([])
     } finally {
@@ -98,9 +105,31 @@ export default function Dashboard() {
     return () => clearTimeout(timer)
   }, [search, files])
 
+  // Tab-aware file filtering
+  const getTabFiles = () => {
+    const now = new Date()
+    switch (activeTab) {
+      case 'Recent':
+        return files.filter(f => {
+          const created = new Date(f.createdAt)
+          return (now - created) < 7 * 24 * 60 * 60 * 1000
+        })
+      case 'Shared':
+        return files.filter(f => f.sharedWith && f.sharedWith.length > 0)
+      case 'Starred':
+        return files.filter(f => f.starred)
+      case 'Trash':
+        return files.filter(f => f.isDeleted)
+      default:
+        return files
+    }
+  }
+
+  const tabFiles = getTabFiles()
+
   // Filter files based on search and category
   // Display:
-  const filtered = searchResults ?? files.filter(f => {
+  const filtered = searchResults ?? tabFiles.filter(f => {
     const matchFilter = filter === 'All' || f.category?.toLowerCase() === filter.toLowerCase()
     return matchFilter
   })
@@ -242,10 +271,10 @@ export default function Dashboard() {
             }}>
               <div style={{ fontSize: 28, marginBottom: 10 }}>📭</div>
               <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--text)', marginBottom: 4 }}>
-                {search ? 'Koi file nahi mili' : 'Abhi koi file nahi hai'}
+                {search ? 'Koi file nahi mili' : 'No file uploaded till now'}
               </div>
               <div style={{ fontSize: 12, color: 'var(--gray-text)' }}>
-                {search ? 'Alag keyword se search karo' : 'Upar upload zone se pehli file upload karo'}
+                {search ? 'Alag keyword se search karo' : ' Upload your first file from upload zone'}
               </div>
             </div>
           ) : (

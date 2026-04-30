@@ -177,9 +177,9 @@ export default function RegisterPage() {
       if (!err.response) {
         errorMsg = 'Network error - internet check karo'
       } else if (err.response.status === 409) {
-        errorMsg = 'Email pehle se exist karta hai'
+        errorMsg = err.response.data?.message || 'Email pehle se exist karta hai'
       } else if (err.response.status === 400) {
-        errorMsg = err.response.data?.msg || 'Invalid data provided'
+        errorMsg = err.response.data?.message || err.response.data?.msg || 'Invalid data provided'
       } else if (err.response.status === 429) {
         errorMsg = 'Bohot requests. Baad mein try karo.'
       } else if (err.response.status >= 500) {

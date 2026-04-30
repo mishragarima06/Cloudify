@@ -11,6 +11,7 @@ const {
   generateShareLink,
   accessShareLink,
   getFileLogs,
+  toggleStar,
 } = require("../controllers/fileController");
 
 const upload = multer({
@@ -33,6 +34,7 @@ router.post("/upload", upload.single("file"), uploadFile);
 router.get("/", getMyFiles);
 router.get("/download/:id", downloadFile);
 router.delete("/:id", deleteFile);
+router.put("/:id/star", toggleStar);
 router.post("/:id/share", shareWithUser);
 router.post("/:id/share-link", generateShareLink);
 router.get("/:id/logs", getFileLogs);

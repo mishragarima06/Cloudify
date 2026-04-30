@@ -101,11 +101,19 @@ const getMyFiles = async (req, res) => {
         .select("-encryptionIV -storageKey -activityLog")
         .sort({ createdAt: -1 });
 
-      res.status(200).json({ count: files.length, files });
+      // Compute stats
+      const usedBytes = files.reduce((sum, f) => sum + (f.size || 0), 0);
+      const sharedCount = files.filter(f => f.sharedWith && f.sharedWith.length > 0).length;
+
+      res.status(200).json({
+        count: files.length,
+        files,
+        stats: { total: files.length, usedBytes, shared: sharedCount },
+      });
     } catch (dbError) {
       // Mock response for development
       console.log("⚠️  Database not available for getMyFiles, returning empty mock");
-      res.status(200).json({ count: 0, files: [] });
+      res.status(200).json({ count: 0, files: [], stats: { total: 0, usedBytes: 0, shared: 0 } });
     }
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
@@ -298,6 +306,20 @@ const getFileLogs = async (req, res) => {
   }
 };
 
+const toggleStar = async (req, res) => {
+  try {
+    const file = await File.findOne({ _id: req.params.id, owner: req.user.id });
+    if (!file) return res.status(404).json({ message: "File not found" });
+
+    file.starred = !file.starred;
+    await file.save();
+
+    res.status(200).json({ message: "Starred status updated", starred: file.starred });
+  } catch (error) {
+    res.status(500).json({ message: "Error updating star status", error: error.message });
+  }
+};
+
 module.exports = {
   uploadFile,
   getMyFiles,
@@ -307,4 +329,5 @@ module.exports = {
   generateShareLink,
   accessShareLink,
   getFileLogs,
+  toggleStar,
 };

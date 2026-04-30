@@ -76,6 +76,12 @@ const FileSchema = new mongoose.Schema(
       default: false,
     },
 
+    // ── Starred ──
+    starred: {
+      type: Boolean,
+      default: false,
+    },
+
     // ── Activity Log ──
     activityLog: [
       {

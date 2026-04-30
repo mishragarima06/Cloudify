@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import axios from 'axios'
+import { apiClient } from '../context/AuthContext'
 import { CATEGORY_STYLE } from '../components/UploadZone'
 
 function fmtSize(bytes) {
@@ -32,14 +32,22 @@ export default function FilePage() {
   const [msg, setMsg]             = useState('')
 
   useEffect(() => {
-    axios.get(`/api/files/${id}`)
-      .then(r => setFile(r.data))
+    // Fetch all files then find the one matching id
+    apiClient.get('/api/files')
+      .then(r => {
+        const found = (r.data.files || []).find(f => f._id === id)
+        if (found) {
+          setFile(found)
+        } else {
+          navigate('/dashboard')
+        }
+      })
       .catch(() => navigate('/dashboard'))
       .finally(() => setLoading(false))
   }, [id])
 
   const download = async () => {
-    const res = await axios.get(`/api/files/${id}/download`, { responseType: 'blob' })
+    const res = await apiClient.get(`/api/files/download/${id}`, { responseType: 'blob' })
     const url = URL.createObjectURL(new Blob([res.data]))
     const a = document.createElement('a'); a.href = url; a.download = file.name; a.click()
     URL.revokeObjectURL(url)
@@ -47,18 +55,25 @@ export default function FilePage() {
 
   const share = async () => {
     try {
-      await axios.post(`/api/files/${id}/share`, { email: shareEmail, role: shareRole })
+      await apiClient.post(`/api/files/${id}/share`, { email: shareEmail, role: shareRole })
       setMsg('Shared successfully!'); setEmail('')
     } catch { setMsg('Share failed') }
   }
 
   const genLink = async () => {
-    const { data } = await axios.post(`/api/files/${id}/share-link`, { expiresIn: shareExpiry })
-    setShareLink(data.link)
+    const { data } = await apiClient.post(`/api/files/${id}/share-link`, { expiresIn: shareExpiry })
+    setShareLink(data.shareLink?.url || data.link)
+  }
+
+  const toggleStar = async () => {
+    try {
+      const { data } = await apiClient.put(`/api/files/${id}/star`)
+      setFile(prev => ({ ...prev, starred: data.starred }))
+    } catch { setMsg('Error starring file') }
   }
 
   const deleteFile = async () => {
-    await axios.delete(`/api/files/${id}`)
+    await apiClient.delete(`/api/files/${id}`)
     navigate('/dashboard')
   }
 
@@ -151,12 +166,19 @@ export default function FilePage() {
           )}
 
           {/* Action buttons */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginTop: 20 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginTop: 20 }}>
             <button onClick={download} style={{
               padding: '9px', background: 'var(--blue)', color: '#fff',
               border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: 'pointer'
             }}>
               Download
+            </button>
+            <button onClick={toggleStar} style={{
+              padding: '9px', background: 'transparent',
+              color: file.starred ? 'var(--amber)' : 'var(--text-sub)',
+              border: '0.5px solid var(--gray-border)', borderRadius: 8, fontSize: 12, cursor: 'pointer'
+            }}>
+              {file.starred ? 'Unstar' : 'Star'}
             </button>
             <button onClick={() => setShowShare(s => !s)} style={{
               padding: '9px', background: showShare ? 'var(--blue-light)' : 'transparent',

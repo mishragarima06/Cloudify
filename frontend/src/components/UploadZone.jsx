@@ -134,7 +134,7 @@ export default function UploadZone({ onUploaded, userPlan = 'free' }) {
           </svg>
         </div>
         <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--blue-dark)', marginBottom: 3 }}>
-          {uploading ? currentFile?.name : 'Yahan drag karo ya click karo'}
+          {uploading ? currentFile?.name : 'Drag or Click to upload'}
         </div>
         <div style={{ fontSize: 11, color: 'var(--blue-mid)' }}>
           PDF, JPG, XLSX, PY · max 50MB

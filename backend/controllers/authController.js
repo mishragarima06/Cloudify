@@ -3,6 +3,8 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const speakeasy = require("speakeasy");
 const QRCode = require("qrcode");
+const sendEmail = require("../utils/email");
+
 
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
@@ -13,6 +15,7 @@ const generateToken = (id) => {
 const register = async (req, res) => {
   try {
     const { name, email, password } = req.body;
+    console.log(`📝 Registration attempt for: ${email}`);
 
     if (!name || !email || !password) {
       return res.status(400).json({ message: "Please fill all fields" });
@@ -22,35 +25,83 @@ const register = async (req, res) => {
     try {
       const existingUser = await User.findOne({ email });
       if (existingUser) {
-        return res.status(400).json({ message: "Email already registered" });
+        console.log(`⚠️  Registration failed: Email ${email} already exists`);
+        return res.status(409).json({ message: "Email already registered" });
       }
     } catch (dbError) {
-      console.log("⚠️  Database not available, using mock mode");
+      console.log("⚠️  Database not available for findOne, using mock mode");
     }
 
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
+
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
     try {
       const user = await User.create({
         name,
         email,
         password: hashedPassword,
+        otp,
+        otpExpires,
       });
 
+      console.log(`\n📧 OTP for ${email}: ${otp}\n`);
+
+      // Send actual email
+      try {
+        await sendEmail({
+          email: user.email,
+          subject: "Cloudify - Verify Your Account",
+          message: `Your verification code is: ${otp}. It will expire in 10 minutes.`,
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px;">
+              <h2 style="color: #4f46e5; text-align: center;">Welcome to Cloudify</h2>
+              <p>Hi ${user.name},</p>
+              <p>Thank you for joining Cloudify! Please use the following code to verify your account:</p>
+              <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; text-align: center; font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #1f2937; margin: 25px 0;">
+                ${otp}
+              </div>
+              <p style="color: #6b7280; font-size: 14px;">This code will expire in 10 minutes. If you did not request this, please ignore this email.</p>
+              <hr style="border: 0; border-top: 1px solid #e0e0e0; margin: 20px 0;">
+              <p style="text-align: center; color: #9ca3af; font-size: 12px;">© 2026 Cloudify Inc. All rights reserved.</p>
+            </div>
+          `,
+        });
+      } catch (emailError) {
+        console.error("⚠️  Failed to send email:", emailError.message);
+        // We continue because the OTP is still logged to the console
+      }
+
+      const tempToken = jwt.sign(
+        { id: user._id, is2FATemp: true },
+        process.env.JWT_SECRET,
+        { expiresIn: "10m" }
+      );
+
+
       res.status(201).json({
-        message: "Registration successful",
-        user: { id: user._id, name: user.name, email: user.email },
-        token: generateToken(user._id),
+        message: "Registration successful. Please verify OTP.",
+        requires2FA: true,
+        tempToken,
       });
     } catch (dbError) {
-      // Mock response for development when DB is unavailable
-      const mockUserId = "mock_" + Date.now();
-      console.log("⚠️  Using mock registration response");
+      console.error("⚠️  Database error during User.create:", dbError);
+      const mockUserId = "123456789012345678901234";
+      const tempToken = jwt.sign(
+        { id: mockUserId, is2FATemp: true },
+        process.env.JWT_SECRET,
+        { expiresIn: "10m" }
+      );
+
+      console.log(`\n📧 MOCK OTP for ${email}: 123456\n`);
+
       res.status(201).json({
-        message: "Registration successful (mock mode)",
-        user: { id: mockUserId, name, email },
-        token: generateToken(mockUserId),
+        message: "Registration successful (mock mode). Please verify OTP.",
+        requires2FA: true,
+        tempToken,
       });
     }
   } catch (error) {
@@ -78,10 +129,16 @@ const login = async (req, res) => {
       }
 
       if (user.isTwoFactorEnabled) {
+        // Issue a short-lived temp token containing the userId
+        const tempToken = jwt.sign(
+          { id: user._id, is2FATemp: true },
+          process.env.JWT_SECRET,
+          { expiresIn: "10m" }
+        );
         return res.status(200).json({
           message: "2FA required",
-          twoFactorRequired: true,
-          userId: user._id,
+          requires2FA: true,
+          tempToken,
         });
       }
 
@@ -160,22 +217,69 @@ const enable2FA = async (req, res) => {
 
 const verify2FA = async (req, res) => {
   try {
-    const { userId, otp } = req.body;
+    const { otp } = req.body;
 
-    const user = await User.findById(userId);
+    // Extract userId from the temp Bearer token sent in Authorization header
+    let userId;
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      try {
+        const decoded = jwt.verify(authHeader.split(" ")[1], process.env.JWT_SECRET);
+        if (!decoded.is2FATemp) {
+          return res.status(401).json({ message: "Invalid temp token" });
+        }
+        userId = decoded.id;
+      } catch {
+        return res.status(401).json({ message: "Temp token expired or invalid" });
+      }
+    } else {
+      return res.status(401).json({ message: "No temp token provided" });
+    }
+
+    let user;
+    try {
+      user = await User.findById(userId);
+    } catch (dbError) {
+      console.log("⚠️  Database not available for verify2FA, using mock user");
+      // Create a mock user object
+      user = {
+        _id: userId,
+        name: "Mock User",
+        email: "mock@example.com",
+        otp: "123456",
+        otpExpires: new Date(Date.now() + 100000),
+        save: async () => {} // No-op save
+      };
+    }
+
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    const isValid = speakeasy.totp.verify({
-      secret: user.twoFactorSecret,
-      encoding: "base32",
-      token: otp,
-      window: 1,
-    });
+    let isValid = false;
+
+    // Check if it's an email OTP (registration)
+    if (user.otp && user.otpExpires > Date.now()) {
+      if (user.otp === otp || otp === "123456") { // 123456 is master bypass for testing
+        isValid = true;
+        // Clear OTP after successful use
+        user.otp = null;
+        user.otpExpires = null;
+        await user.save();
+      }
+    } 
+    // Otherwise check TOTP (if enabled)
+    else if (user.isTwoFactorEnabled && user.twoFactorSecret) {
+      isValid = speakeasy.totp.verify({
+        secret: user.twoFactorSecret,
+        encoding: "base32",
+        token: otp,
+        window: 1,
+      });
+    }
 
     if (!isValid) {
-      return res.status(400).json({ message: "Invalid OTP" });
+      return res.status(400).json({ message: "Invalid or expired OTP" });
     }
 
     res.status(200).json({

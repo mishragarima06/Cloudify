@@ -65,7 +65,7 @@ export default function OTPPage() {
     const tempToken = sessionStorage.getItem('tempToken')
     if (!tempToken) {
       setSessionExpired(true)
-      setError('Session expire ho gaya. Login karo dobara.')
+      setError('Session has been expired.Please Login again')
     }
   }, [])
 
@@ -93,7 +93,7 @@ export default function OTPPage() {
 
     const tempToken = sessionStorage.getItem('tempToken')
     if (!tempToken) {
-      setError('Session expire ho gaya. Login karo dobara.')
+      setError('Session has been expired.Please Login again')
       return
     }
 

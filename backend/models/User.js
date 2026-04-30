@@ -30,6 +30,16 @@ const UserSchema = new mongoose.Schema(
       default: false,
     },
 
+    // ── Email OTP Verification ──
+    otp: {
+      type: String,
+      default: null,
+    },
+    otpExpires: {
+      type: Date,
+      default: null,
+    },
+
     // Storage usage in bytes
     storageUsed: {
       type: Number,
