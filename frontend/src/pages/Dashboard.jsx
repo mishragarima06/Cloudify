@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react'
-import axios from 'axios'
 import { useSearchParams } from 'react-router-dom'
 import { apiClient } from '../context/AuthContext'
 import Sidebar from '../components/Sidebar'
@@ -9,9 +8,53 @@ import { smartSearch } from '../services/aiServices'
 
 const CATEGORY_FILTERS = ['All', 'Document', 'Image', 'Code', 'Spreadsheet', 'Archive', 'Other']
 
+const s = {
+  main: {
+    flex: 1, overflow: 'auto', background: 'var(--bg-main)', height: '100vh'
+  },
+  content: {
+    padding: '40px', maxWidth: '1200px', margin: '0 auto'
+  },
+  topBar: {
+    display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '32px'
+  },
+  searchBox: {
+    position: 'relative', width: '100%', maxWidth: '400px'
+  },
+  searchInput: {
+    width: '100%', padding: '12px 16px 12px 42px', borderRadius: '14px', border: '1px solid var(--border-color)',
+    fontSize: '14px', background: 'white', outline: 'none', transition: 'var(--transition)'
+  },
+  statsGrid: {
+    display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', marginBottom: '32px'
+  },
+  statCard: {
+    background: 'white', padding: '24px', borderRadius: '20px', border: '1px solid var(--border-color)',
+    display: 'flex', alignItems: 'center', gap: '20px', boxShadow: 'var(--shadow-sm)'
+  },
+  statIcon: {
+    width: '48px', height: '48px', borderRadius: '12px', background: 'var(--primary-light)',
+    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', color: 'var(--primary)'
+  },
+  filterBar: {
+    display: 'flex', gap: '8px', marginBottom: '24px', flexWrap: 'wrap'
+  },
+  filterBtn: (active) => ({
+    padding: '8px 16px', borderRadius: '20px', fontSize: '13px', fontWeight: '600',
+    background: active ? 'var(--primary)' : 'white', color: active ? 'white' : 'var(--text-muted)',
+    border: '1px solid', borderColor: active ? 'var(--primary)' : 'var(--border-color)',
+    cursor: 'pointer', transition: 'var(--transition)'
+  }),
+  listHeader: {
+    display: 'grid', gridTemplateColumns: '40px 2fr 1fr 1fr 1fr 100px', padding: '12px 16px',
+    fontSize: '12px', fontWeight: '700', color: 'var(--text-light)', textTransform: 'uppercase',
+    letterSpacing: '0.5px'
+  }
+}
+
 function fmtBytes(b) {
   if (b > 1024 * 1024 * 1024) return (b / 1024 / 1024 / 1024).toFixed(1) + ' GB'
-  if (b > 1024 * 1024) return (b / 1024 / 1024).toFixed(0) + ' MB'
+  if (b > 1024 * 1024) return (b / 1024 / 1024).toFixed(1) + ' MB'
   return Math.round(b / 1024) + ' KB'
 }
 
@@ -29,110 +72,57 @@ export default function Dashboard() {
     return tabMap[tabParam] || 'My files'
   })
   const [searchResults, setSearchResults] = useState(null)
-  const [aiSearching, setAiSearching] = useState(false)
 
-  // Update URL when tab changes
-  useEffect(() => {
-    if (activeTab === 'My files') {
-      setSearchParams({})
-    } else {
-      const tabParam = activeTab.toLowerCase().replace(' ', '-')
-      setSearchParams({ tab: tabParam })
-    }
-  }, [activeTab, setSearchParams])
-
-  // Read URL and update activeTab when URL changes
-  useEffect(() => {
-    const tabParam = searchParams.get('tab')
-    const tabMap = { shared: 'Shared', recent: 'Recent', starred: 'Starred', trash: 'Trash' }
-    const newTab = tabMap[tabParam] || 'My files'
-    setActiveTab(newTab)
-  }, [searchParams])
-
-  const fetchFiles = async () => {
-    try {
-      setError('')
-      const { data } = await apiClient.get('/api/files')
-
-      const fileList = Array.isArray(data.files) ? data.files : []
-      setFiles(fileList)
-
-      // Compute stats from returned data
-      const totalBytes = fileList.reduce((sum, f) => sum + (f.size || 0), 0)
-      const sharedCount = fileList.filter(f => f.sharedWith && f.sharedWith.length > 0).length
-      setStats({
-        total: data.count ?? fileList.length,
-        usedBytes: data.stats?.usedBytes ?? totalBytes,
-        shared: data.stats?.shared ?? sharedCount,
-      })
-    } catch (err) {
-      console.error('Dashboard: Error fetching files:', err)
-
-      let errorMsg = 'Files cannot be loaded.'
-      if (!err.response) {
-        errorMsg = 'Network error - internet check karo'
-      } else if (err.response.status === 401) {
-        errorMsg = 'Session expire ho gaya'
-      } else if (err.response.status >= 500) {
-        errorMsg = 'Server error - try again later'
-      }
-
-      setError(errorMsg)
-      setFiles([])
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  // Fetch files on component mount
   useEffect(() => {
     fetchFiles()
   }, [])
 
   useEffect(() => {
-    if (!search.trim()) {
-      setSearchResults(null)
-      return
-    }
+    if (activeTab === 'My files') setSearchParams({})
+    else setSearchParams({ tab: activeTab.toLowerCase().replace(' ', '-') })
+  }, [activeTab, setSearchParams])
 
-    const timer = setTimeout(async () => {
-      setAiSearching(true)
-      const results = await smartSearch(search, files)
-      setSearchResults(results)
-      setAiSearching(false)
-    }, 400) // 400ms wait karo typing stop hone ke baad
-
-    return () => clearTimeout(timer)
-  }, [search, files])
-
-  // Tab-aware file filtering
-  const getTabFiles = () => {
-    const now = new Date()
-    switch (activeTab) {
-      case 'Recent':
-        return files.filter(f => {
-          const created = new Date(f.createdAt)
-          return (now - created) < 7 * 24 * 60 * 60 * 1000
-        })
-      case 'Shared':
-        return files.filter(f => f.sharedWith && f.sharedWith.length > 0)
-      case 'Starred':
-        return files.filter(f => f.starred)
-      case 'Trash':
-        return files.filter(f => f.isDeleted)
-      default:
-        return files
+  const fetchFiles = async () => {
+    try {
+      setLoading(true)
+      const { data } = await apiClient.get('/api/files')
+      const fileList = Array.isArray(data.files) ? data.files : []
+      setFiles(fileList)
+      setStats({
+        total: data.count || fileList.length,
+        usedBytes: data.stats?.usedBytes || fileList.reduce((s, f) => s + (f.size || 0), 0),
+        shared: data.stats?.shared || fileList.filter(f => f.sharedWith?.length > 0).length,
+      })
+    } catch (err) {
+      setError('Failed to load files')
+    } finally {
+      setLoading(false)
     }
   }
 
-  const tabFiles = getTabFiles()
+  useEffect(() => {
+    if (!search.trim()) { setSearchResults(null); return }
+    const timer = setTimeout(async () => {
+      const results = await smartSearch(search, files)
+      setSearchResults(results)
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [search, files])
 
-  // Filter files based on search and category
-  // Display:
-  const filtered = searchResults ?? tabFiles.filter(f => {
-    const matchFilter = filter === 'All' || f.category?.toLowerCase() === filter.toLowerCase()
-    return matchFilter
-  })
+  const getTabFiles = () => {
+    const now = new Date()
+    switch (activeTab) {
+      case 'Recent': return files.filter(f => (now - new Date(f.createdAt)) < 7 * 24 * 60 * 60 * 1000)
+      case 'Shared': return files.filter(f => f.sharedWith?.length > 0)
+      case 'Starred': return files.filter(f => f.starred)
+      case 'Trash': return files.filter(f => f.isDeleted)
+      default: return files
+    }
+  }
+
+  const filtered = (searchResults ?? getTabFiles()).filter(f => 
+    filter === 'All' || f.category?.toLowerCase() === filter.toLowerCase()
+  )
 
   const usedPct = Math.min(Math.round((stats.usedBytes / (5 * 1024 ** 3)) * 100), 100)
 
@@ -140,148 +130,103 @@ export default function Dashboard() {
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
       <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
 
-      <main style={{ flex: 1, overflow: 'auto', padding: '24px 28px', minWidth: 0 }}>
-
-        {/* Top bar with search */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 22 }}>
-          <div style={{ flex: 1, position: 'relative' }}>
-            <svg style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', opacity: 0.4 }}
-              width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <circle cx="6" cy="6" r="4.5" stroke="#000" strokeWidth="1.4" />
-              <path d="M9.5 9.5l2.5 2.5" stroke="#000" strokeWidth="1.4" strokeLinecap="round" />
-            </svg>
-            <input
-              placeholder="Search files..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              style={{
-                width: '100%', padding: '8px 12px 8px 32px', fontSize: 13,
-                border: '0.5px solid var(--gray-border)', borderRadius: 8,
-                background: 'var(--white)', color: 'var(--text)', outline: 'none'
-              }}
-              onFocus={e => e.target.style.borderColor = 'var(--blue-mid)'}
-              onBlur={e => e.target.style.borderColor = 'var(--gray-border)'}
-            />
-          </div>
-          <div style={{
-            width: 34, height: 34, borderRadius: '50%', background: 'var(--blue-light)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 12, fontWeight: 600, color: 'var(--blue)', flexShrink: 0
-          }}>
-            GS
-          </div>
-        </div>
-
-        {/* Error message */}
-        {error && (
-          <div style={{
-            background: 'var(--red-light)', border: '0.5px solid var(--red)',
-            borderRadius: 8, padding: '12px 14px', fontSize: 12, color: 'var(--red)',
-            marginBottom: 16
-          }}>
-            {error}
-          </div>
-        )}
-
-        {/* Stats cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 22 }}
-          className="fade-up">
-          {[
-            { num: stats.total || 0, label: 'Total files' },
-            { num: fmtBytes(stats.usedBytes || 0) + ' / 5 GB', label: 'Storage used' },
-            { num: stats.shared || 0, label: 'Shared' },
-          ].map((s, i) => (
-            <div key={i} style={{
-              background: 'var(--white)', border: '0.5px solid var(--gray-border)',
-              borderRadius: 10, padding: '14px 16px'
-            }}>
-              <div style={{ fontSize: 22, fontWeight: 600, color: 'var(--text)', lineHeight: 1 }}>
-                {s.num}
-              </div>
-              <div style={{ fontSize: 11, color: 'var(--gray-text)', marginTop: 4 }}>{s.label}</div>
+      <main style={s.main}>
+        <div style={s.content}>
+          {/* Top Bar */}
+          <div style={s.topBar}>
+            <div style={s.searchBox}>
+              <span style={{ position: 'absolute', left: '16px', top: '12px', fontSize: '18px' }}>🔍</span>
+              <input 
+                style={s.searchInput}
+                placeholder="Search files, folders..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+              />
             </div>
-          ))}
-        </div>
-
-        {/* Storage bar */}
-        <div style={{ marginBottom: 22, animation: 'fadeUp 0.35s 0.05s ease both' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--gray-text)', marginBottom: 5 }}>
-            <span>Storage</span>
-            <span>{usedPct}% used</span>
-          </div>
-          <div style={{ height: 5, background: 'var(--gray-border)', borderRadius: 3, overflow: 'hidden' }}>
-            <div style={{
-              height: '100%', width: `${usedPct}%`, borderRadius: 3,
-              background: usedPct > 80 ? 'var(--red)' : 'var(--blue)',
-              transition: 'width 0.6s ease'
-            }} />
-          </div>
-        </div>
-
-        {/* Upload zone */}
-        <div style={{ animation: 'fadeUp 0.35s 0.1s ease both' }}>
-          <UploadZone onUploaded={() => fetchFiles()} />
-        </div>
-
-        {/* Category filters */}
-        <div style={{
-          display: 'flex', gap: 6, flexWrap: 'wrap',
-          marginBottom: 14, animation: 'fadeUp 0.35s 0.15s ease both'
-        }}>
-          {CATEGORY_FILTERS.map(cat => (
-            <button
-              key={cat}
-              onClick={() => setFilter(cat)}
-              style={{
-                padding: '4px 12px', borderRadius: 20, fontSize: 11, fontWeight: 500,
-                border: '0.5px solid', cursor: 'pointer', transition: 'all 0.12s',
-                borderColor: filter === cat ? 'var(--blue)' : 'var(--gray-border)',
-                background: filter === cat ? 'var(--blue-light)' : 'transparent',
-                color: filter === cat ? 'var(--blue-dark)' : 'var(--gray-text)'
-              }}
-            >
-              {cat}
-            </button>
-          ))}
-        </div>
-
-        {/* Files section */}
-        <div style={{ animation: 'fadeUp 0.35s 0.2s ease both' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-sub)' }}>
-              {filter === 'All' ? 'Recent files' : filter + 's'} · {filtered.length}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+              <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'white', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', cursor: 'pointer' }}>🔔</div>
+              <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'var(--primary)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700' }}>G</div>
             </div>
           </div>
 
-          {loading ? (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 10 }}>
-              {[1, 2, 3, 4].map(i => (
-                <div key={i} style={{
-                  height: 100, borderRadius: 10,
-                  background: 'linear-gradient(90deg, var(--gray-2) 25%, var(--gray-border) 50%, var(--gray-2) 75%)',
-                  backgroundSize: '200% 100%', animation: 'shimmer 1.5s infinite'
-                }} />
-              ))}
-            </div>
-          ) : filtered.length === 0 ? (
-            <div style={{
-              textAlign: 'center', padding: '40px 20px',
-              background: 'var(--white)', borderRadius: 12,
-              border: '0.5px solid var(--gray-border)'
-            }}>
-              <div style={{ fontSize: 28, marginBottom: 10 }}>📭</div>
-              <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--text)', marginBottom: 4 }}>
-                {search ? 'Koi file nahi mili' : 'No file uploaded till now'}
-              </div>
-              <div style={{ fontSize: 12, color: 'var(--gray-text)' }}>
-                {search ? 'Alag keyword se search karo' : ' Upload your first file from upload zone'}
+          {/* Stats */}
+          <div style={s.statsGrid} className="animate-fade-up">
+            <div style={s.statCard}>
+              <div style={s.statIcon}>📂</div>
+              <div>
+                <div style={{ fontSize: '24px', fontWeight: '800', lineHeight: '1' }}>{stats.total}</div>
+                <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px', fontWeight: '600' }}>Total files</div>
               </div>
             </div>
-          ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(155px, 1fr))', gap: 10 }}>
-              {filtered.map(f => <FileCard key={f._id} file={f} />)}
+            <div style={{ ...s.statCard, flex: 1, flexDirection: 'column', alignItems: 'flex-start', gap: '8px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'flex-end' }}>
+                 <div>
+                   <div style={{ fontSize: '24px', fontWeight: '800', lineHeight: '1' }}>{fmtBytes(stats.usedBytes)} <span style={{ fontSize: '14px', color: 'var(--text-light)' }}>/ 5 GB</span></div>
+                   <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px', fontWeight: '600' }}>Storage used</div>
+                 </div>
+                 <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--primary)' }}>{usedPct}%</div>
+              </div>
+              <div style={{ height: '8px', width: '100%', background: 'var(--bg-main)', borderRadius: '10px', overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: `${usedPct}%`, background: 'var(--primary)', borderRadius: '10px' }} />
+              </div>
             </div>
-          )}
+            <div style={s.statCard}>
+              <div style={{ ...s.statIcon, background: '#F0FDF4', color: '#16A34A' }}>👥</div>
+              <div>
+                <div style={{ fontSize: '24px', fontWeight: '800', lineHeight: '1' }}>{stats.shared}</div>
+                <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px', fontWeight: '600' }}>Shared</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Upload */}
+          <div className="animate-fade-up" style={{ animationDelay: '0.1s' }}>
+            <UploadZone onUploaded={fetchFiles} />
+          </div>
+
+          {/* Filters */}
+          <div style={s.filterBar} className="animate-fade-up" style={{ animationDelay: '0.2s' }}>
+            {CATEGORY_FILTERS.map(cat => (
+              <button 
+                key={cat} 
+                style={s.filterBtn(filter === cat)}
+                onClick={() => setFilter(cat)}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+
+          {/* Files List */}
+          <div className="animate-fade-up" style={{ animationDelay: '0.3s' }}>
+             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+               <h3 style={{ fontSize: '18px', fontWeight: '800' }}>{filter === 'All' ? 'Recent files' : filter + 's'}</h3>
+               <button style={{ color: 'var(--primary)', fontSize: '13px', fontWeight: '700', background: 'none' }}>View all</button>
+             </div>
+
+             <div style={s.listHeader}>
+                <div></div>
+                <div>Name</div>
+                <div>Type</div>
+                <div>Size</div>
+                <div>Uploaded</div>
+                <div style={{ textAlign: 'right' }}>Actions</div>
+             </div>
+
+             <div style={{ marginTop: '12px' }}>
+                {loading ? (
+                   [1,2,3].map(i => <div key={i} style={{ height: '60px', background: 'white', borderRadius: '12px', marginBottom: '8px', border: '1px solid var(--border-color)', opacity: 0.5 }}></div>)
+                ) : filtered.length === 0 ? (
+                   <div style={{ textAlign: 'center', padding: '60px', background: 'white', borderRadius: '20px', border: '1px solid var(--border-color)' }}>
+                      <div style={{ fontSize: '40px', marginBottom: '10px' }}>📭</div>
+                      <div style={{ fontWeight: '700' }}>No files found</div>
+                      <div style={{ fontSize: '14px', color: 'var(--text-muted)' }}>Try uploading a file or changing your filters</div>
+                   </div>
+                ) : (
+                   filtered.map(f => <FileCard key={f._id} file={f} />)
+                )}
+             </div>
+          </div>
         </div>
       </main>
     </div>

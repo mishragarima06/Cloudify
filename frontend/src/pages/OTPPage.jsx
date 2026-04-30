@@ -1,238 +1,178 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import axios from 'axios'
 
 const s = {
   page: {
-    minHeight: '100vh', display: 'flex', alignItems: 'center',
-    justifyContent: 'center', background: 'var(--gray-bg)', padding: '20px'
-  },
-  box: {
-    width: '100%', maxWidth: '380px',
-    animation: 'fadeUp 0.4s ease both'
-  },
-  logo: {
-    width: 42, height: 42, borderRadius: 12,
-    background: 'var(--blue-light)', display: 'flex',
-    alignItems: 'center', justifyContent: 'center',
-    margin: '0 auto 16px',
-    fontSize: 20, fontWeight: 600, color: 'var(--blue)'
+    minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
+    background: 'var(--bg-main)', padding: '20px'
   },
   card: {
-    background: 'var(--white)', borderRadius: 'var(--radius-lg)',
-    border: '0.5px solid var(--gray-border)', padding: '28px 28px 24px',
-    boxShadow: 'var(--shadow)'
+    width: '100%', maxWidth: '420px', background: 'white', borderRadius: '24px',
+    padding: '40px', textAlign: 'center', boxShadow: 'var(--shadow-lg)'
+  },
+  logo: {
+    width: '48px', height: '48px', background: 'var(--primary)', borderRadius: '12px',
+    display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white',
+    fontSize: '24px', fontWeight: '700', margin: '0 auto 32px'
   },
   title: {
-    fontSize: 18, fontWeight: 600, color: 'var(--text)',
-    textAlign: 'center', marginBottom: 4
+    fontSize: '24px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '8px'
   },
   sub: {
-    fontSize: 13, color: 'var(--text-sub)',
-    textAlign: 'center', marginBottom: 22
+    fontSize: '14px', color: 'var(--text-muted)', marginBottom: '32px'
   },
-  input: {
-    width: '100%', padding: '9px 12px', fontSize: 13,
-    border: '0.5px solid var(--gray-border)', borderRadius: 8,
-    background: 'var(--gray-2)', color: 'var(--text)',
-    outline: 'none', marginBottom: 14, transition: 'border 0.15s',
-    textAlign: 'center', letterSpacing: '4px', fontSize: 20
+  otpContainer: {
+    display: 'flex', gap: '10px', justifyContent: 'center', marginBottom: '32px'
+  },
+  otpInput: {
+    width: '48px', height: '56px', fontSize: '20px', fontWeight: '700', textAlign: 'center',
+    border: '1.5px solid var(--border-color)', borderRadius: '12px', background: 'var(--bg-main)',
+    outline: 'none', transition: 'var(--transition)'
   },
   btn: {
-    width: '100%', padding: '10px', background: 'var(--blue)',
-    color: '#fff', border: 'none', borderRadius: 8,
-    fontSize: 13, fontWeight: 600, cursor: 'pointer',
-    marginTop: 4, transition: 'opacity 0.15s'
+    width: '100%', padding: '14px', background: 'var(--primary)', color: 'white',
+    borderRadius: '12px', fontWeight: '700', fontSize: '15px', cursor: 'pointer',
+    boxShadow: '0 4px 12px rgba(37, 99, 235, 0.2)', border: 'none'
   },
   err: {
-    background: 'var(--red-light)', border: '0.5px solid #F7C1C1',
-    borderRadius: 7, padding: '8px 12px', fontSize: 12,
-    color: 'var(--red)', marginBottom: 14
+    background: '#FEF2F2', border: '1px solid #FCA5A5', borderRadius: '10px',
+    padding: '12px', fontSize: '13px', color: '#B91C1C', marginBottom: '20px'
+  },
+  resend: {
+    marginTop: '24px', fontSize: '14px', color: 'var(--text-muted)'
   }
 }
 
 export default function OTPPage() {
-  const [otp, setOtp] = useState('')
+  const [otp, setOtp] = useState(['', '', '', '', '', ''])
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const [sessionExpired, setSessionExpired] = useState(false)
+  const [timer, setTimer] = useState(45)
+  const inputRefs = useRef([])
   const navigate = useNavigate()
   const { login } = useAuth()
 
-  // Check if tempToken exists on mount
   useEffect(() => {
     const tempToken = sessionStorage.getItem('tempToken')
     if (!tempToken) {
-      setSessionExpired(true)
-      setError('Session has been expired.Please Login again')
+      navigate('/login', { replace: true })
     }
-  }, [])
+  }, [navigate])
 
-  // Validate OTP format (must be 6 digits)
-  const validateOTP = (value) => {
-    return /^\d{0,6}$/.test(value)
+  useEffect(() => {
+    if (timer > 0) {
+      const interval = setInterval(() => setTimer(t => t - 1), 1000)
+      return () => clearInterval(interval)
+    }
+  }, [timer])
+
+  const handleChange = (index, value) => {
+    if (isNaN(value)) return
+    const newOtp = [...otp]
+    newOtp[index] = value.substring(value.length - 1)
+    setOtp(newOtp)
+
+    if (value && index < 5) {
+      inputRefs.current[index + 1].focus()
+    }
   }
 
-  const handleOTPChange = (e) => {
-    const value = e.target.value
-    if (validateOTP(value)) {
-      setOtp(value)
-      if (error) setError('')
+  const handleKeyDown = (index, e) => {
+    if (e.key === 'Backspace' && !otp[index] && index > 0) {
+      inputRefs.current[index - 1].focus()
     }
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-
-    // Validate OTP length
-    if (!otp || otp.length !== 6) {
-      setError('6-digit OTP dalo')
+    const fullOtp = otp.join('')
+    if (fullOtp.length !== 6) {
+      setError('Please enter all 6 digits')
       return
     }
 
     const tempToken = sessionStorage.getItem('tempToken')
-    if (!tempToken) {
-      setError('Session has been expired.Please Login again')
-      return
-    }
-
     setError('')
     setLoading(true)
 
     try {
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000'
-
-      console.log('OTPPage: Verifying OTP')
-
       const { data } = await axios.post(
         `${apiUrl}/api/auth/verify-otp`,
-        { otp: otp.trim() },
-        {
-          headers: {
-            'Authorization': `Bearer ${tempToken}`
-          }
-        }
+        { otp: fullOtp },
+        { headers: { 'Authorization': `Bearer ${tempToken}` } }
       )
 
       if (data.token && data.user) {
-        // Clear tempToken immediately after successful verification
         sessionStorage.removeItem('tempToken')
-
-        // Store token in localStorage for persistence
         localStorage.setItem('cf_token', data.token)
-
-        // Update AuthContext with user and token
         login(data.token, data.user)
-
         navigate('/dashboard', { replace: true })
       } else {
-        setError('Invalid response from server')
+        setError('Invalid response')
       }
     } catch (err) {
-      console.error('OTPPage: OTP verification error:', err)
-
-      // Enhanced error handling
-      let errorMsg = 'OTP verification failed'
-
-      if (!err.response) {
-        errorMsg = 'Network error - internet check karo'
-      } else if (err.response.status === 400) {
-        errorMsg = 'OTP galat hai'
-      } else if (err.response.status === 401) {
-        errorMsg = 'Session expire ho gaya'
-        sessionStorage.removeItem('tempToken')
-      } else if (err.response.status === 429) {
-        errorMsg = 'Bohot attempts. Baad mein try karo.'
-      } else if (err.response.status >= 500) {
-        errorMsg = 'Server error - baad mein try karo'
-      } else {
-        errorMsg = err.response.data?.msg || err.response.data?.message || errorMsg
-      }
-
-      setError(errorMsg)
-      // Clear OTP field on error
-      setOtp('')
+      setError(err.response?.data?.message || 'Verification failed')
     } finally {
       setLoading(false)
     }
   }
 
-  if (sessionExpired) {
-    return (
-      <div style={s.page}>
-        <div style={s.box}>
-          <div style={s.logo}>C</div>
-          <div style={s.card}>
-            <div style={s.title}>Session Expired</div>
-            <div style={s.sub}>{error}</div>
-            <button
-              style={s.btn}
-              onClick={() => navigate('/login', { replace: true })}
-            >
-              Go to Login
-            </button>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
   return (
     <div style={s.page}>
-      <div style={s.box}>
+      <div style={s.card} className="animate-fade-up">
         <div style={s.logo}>C</div>
-        <div style={s.card}>
-          <div style={s.title}>Verify Your Account</div>
-          <div style={s.sub}>Enter the 6-digit code sent to your email</div>
+        <h1 style={s.title}>Verify your account</h1>
+        <p style={s.sub}>Enter the 6-digit code sent to your email</p>
 
-          {error && <div style={s.err}>{error}</div>}
+        {error && <div style={s.err}>{error}</div>}
 
-          <form onSubmit={handleSubmit}>
-            <input
-              style={{
-                ...s.input,
-                borderColor: error ? 'var(--red)' : 'var(--gray-border)'
-              }}
-              type="text"
-              placeholder="000000"
-              value={otp}
-              onChange={handleOTPChange}
-              maxLength="6"
-              disabled={loading}
-              autoFocus
-              onFocus={e => e.target.style.borderColor = 'var(--blue-mid)'}
-              onBlur={e => e.target.style.borderColor = error ? 'var(--red)' : 'var(--gray-border)'}
-            />
-
-            <button
-              style={{
-                ...s.btn,
-                opacity: loading ? 0.7 : 1,
-                cursor: loading ? 'not-allowed' : 'pointer'
-              }}
-              type="submit"
-              disabled={loading}
-            >
-              {loading ? 'Verifying...' : 'Verify OTP'}
-            </button>
-          </form>
-
-          <div style={{ textAlign: 'center', marginTop: 12 }}>
-            <button
-              onClick={() => navigate('/login', { replace: true })}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                color: 'var(--blue)',
-                fontSize: 12,
-                cursor: 'pointer',
-                fontWeight: 500
-              }}
-            >
-              Back to Login
-            </button>
+        <form onSubmit={handleSubmit}>
+          <div style={s.otpContainer}>
+            {otp.map((digit, idx) => (
+              <input
+                key={idx}
+                ref={el => inputRefs.current[idx] = el}
+                style={{ ...s.otpInput, borderColor: error ? 'var(--danger)' : 'var(--border-color)' }}
+                type="text"
+                value={digit}
+                onChange={e => handleChange(idx, e.target.value)}
+                onKeyDown={e => handleKeyDown(idx, e)}
+                maxLength="1"
+                disabled={loading}
+                onFocus={e => e.target.style.borderColor = 'var(--primary)'}
+                onBlur={e => e.target.style.borderColor = 'var(--border-color)'}
+              />
+            ))}
           </div>
+
+          <button type="submit" style={s.btn} disabled={loading}>
+            {loading ? 'Verifying...' : 'Verify OTP'}
+          </button>
+        </form>
+
+        <div style={s.resend}>
+          {timer > 0 ? (
+            `Resend code in 00:${timer.toString().padStart(2, '0')}`
+          ) : (
+            <button 
+              onClick={() => setTimer(45)}
+              style={{ background: 'none', color: 'var(--primary)', fontWeight: '700', fontSize: '14px' }}
+            >
+              Resend code
+            </button>
+          )}
+        </div>
+        
+        <div style={{ marginTop: '20px' }}>
+          <button 
+            onClick={() => navigate('/login')}
+            style={{ background: 'none', color: 'var(--text-muted)', fontSize: '13px' }}
+          >
+            Back to Login
+          </button>
         </div>
       </div>
     </div>

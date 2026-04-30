@@ -1,347 +1,243 @@
 import React from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 
 const s = {
-  page: {
-    minHeight: '100vh',
-    background: '#ffffff',
-    color: '#333333',
-    fontFamily: 'Inter, sans-serif'
-  },
   nav: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: '20px 40px',
-    borderBottom: '1px solid #f0f0f0'
+    padding: '20px 40px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+    maxWidth: '1200px', margin: '0 auto', width: '100%'
   },
-  logoArea: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 12,
-    fontSize: 20,
-    fontWeight: 600,
-    color: 'var(--blue)',
-    cursor: 'pointer'
-  },
-  logoIcon: {
-    width: 32, height: 32, borderRadius: 8,
-    background: 'var(--blue)', display: 'flex',
-    alignItems: 'center', justifyContent: 'center',
-    fontSize: 18, color: '#fff', fontWeight: 700
+  logo: {
+    display: 'flex', alignItems: 'center', gap: '10px', fontSize: '22px', fontWeight: '700', color: 'var(--primary)'
   },
   navLinks: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 24
+    display: 'flex', gap: '30px', alignItems: 'center'
   },
   link: {
-    color: '#555',
-    textDecoration: 'none',
-    fontSize: 14,
-    fontWeight: 500,
-    cursor: 'pointer',
-    transition: 'color 0.2s'
-  },
-  btnSecondary: {
-    padding: '8px 16px',
-    background: 'transparent',
-    color: 'var(--blue)',
-    border: '1px solid var(--blue)',
-    borderRadius: 8,
-    fontSize: 14,
-    fontWeight: 500,
-    cursor: 'pointer',
-    transition: 'background 0.2s'
-  },
-  btnPrimary: {
-    padding: '8px 16px',
-    background: 'var(--blue)',
-    color: '#fff',
-    border: 'none',
-    borderRadius: 8,
-    fontSize: 14,
-    fontWeight: 500,
-    cursor: 'pointer',
-    transition: 'opacity 0.2s'
+    fontSize: '14px', fontWeight: '500', color: 'var(--text-muted)', transition: 'var(--transition)'
   },
   hero: {
-    padding: '100px 20px',
-    textAlign: 'center',
-    maxWidth: 800,
-    margin: '0 auto'
+    padding: '80px 40px', maxWidth: '1200px', margin: '0 auto', display: 'flex', alignItems: 'center', gap: '60px'
   },
-  heroBadge: {
-    display: 'inline-block',
-    padding: '6px 16px',
-    background: 'var(--blue-light)',
-    color: 'var(--blue-dark)',
-    borderRadius: 20,
-    fontSize: 13,
-    fontWeight: 600,
-    marginBottom: 24
+  badge: {
+    display: 'inline-flex', alignItems: 'center', padding: '6px 14px', background: 'var(--primary-light)',
+    color: 'var(--primary)', borderRadius: '20px', fontSize: '12px', fontWeight: '600', marginBottom: '24px',
+    gap: '8px'
   },
-  heroTitle: {
-    fontSize: 56,
-    fontWeight: 700,
-    lineHeight: 1.15,
-    color: '#111',
-    marginBottom: 24
+  title: {
+    fontSize: '56px', fontWeight: '800', lineHeight: '1.1', color: 'var(--text-main)', marginBottom: '20px'
   },
-  heroSub: {
-    fontSize: 18,
-    color: '#555',
-    lineHeight: 1.6,
-    marginBottom: 40,
-    maxWidth: 640,
-    margin: '0 auto 40px'
+  subtitle: {
+    fontSize: '18px', color: 'var(--text-muted)', marginBottom: '32px', maxWidth: '500px'
   },
-  heroBtns: {
-    display: 'flex',
-    gap: 16,
-    justifyContent: 'center'
+  btnGroup: {
+    display: 'flex', gap: '16px'
   },
-  heroBtnLarge: {
-    padding: '12px 24px',
-    background: 'var(--blue)',
-    color: '#fff',
-    border: 'none',
-    borderRadius: 8,
-    fontSize: 15,
-    fontWeight: 500,
-    cursor: 'pointer'
+  btnPrimary: {
+    padding: '14px 28px', background: 'var(--primary)', color: 'white', borderRadius: '10px',
+    fontWeight: '600', fontSize: '15px', boxShadow: '0 4px 12px rgba(37, 99, 235, 0.2)'
   },
-  heroBtnOutline: {
-    padding: '12px 24px',
-    background: 'transparent',
-    color: '#111',
-    border: '1px solid #ccc',
-    borderRadius: 8,
-    fontSize: 15,
-    fontWeight: 500,
-    cursor: 'pointer'
+  btnSecondary: {
+    padding: '14px 28px', background: 'white', color: 'var(--primary)', borderRadius: '10px',
+    fontWeight: '600', fontSize: '15px', border: '1px solid var(--border-color)'
   },
-  featuresSection: {
-    padding: '80px 40px',
-    background: '#fcfcfc',
-    textAlign: 'center',
-    borderTop: '1px solid #f0f0f0'
+  stats: {
+    display: 'flex', gap: '40px', marginTop: '60px'
   },
-  featuresTitleSmall: {
-    fontSize: 12,
-    fontWeight: 700,
-    color: 'var(--blue)',
-    letterSpacing: 1.5,
-    textTransform: 'uppercase',
-    marginBottom: 12
+  statItem: {
+    display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text-muted)', fontSize: '14px'
   },
-  featuresTitle: {
-    fontSize: 36,
-    fontWeight: 700,
-    color: '#111',
-    marginBottom: 16
-  },
-  featuresSub: {
-    fontSize: 16,
-    color: '#555',
-    marginBottom: 60,
-    maxWidth: 600,
-    margin: '0 auto 60px'
+  section: {
+    padding: '100px 40px', textAlign: 'center'
   },
   grid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-    gap: 24,
-    maxWidth: 1040,
-    margin: '0 auto',
-    textAlign: 'left'
+    display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '30px', maxWidth: '1100px', margin: '50px auto'
   },
-  card: {
-    background: '#fff',
-    padding: 28,
-    borderRadius: 16,
-    border: '1px solid #eaeaea',
-    boxShadow: '0 4px 20px rgba(0,0,0,0.04)',
+  featureCard: {
+    padding: '40px 30px', borderRadius: '20px', background: 'white', border: '1px solid var(--border-color)',
+    textAlign: 'left', transition: 'var(--transition)'
   },
-  cardIconBox: {
-    width: 44, height: 44,
-    borderRadius: 10,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: 22,
-    marginBottom: 20
-  },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: 600,
-    color: '#111',
-    marginBottom: 10
-  },
-  cardText: {
-    fontSize: 14,
-    color: '#666',
-    lineHeight: 1.5
-  },
-  ctaSection: {
-    padding: '80px 20px',
-    textAlign: 'center',
-    background: 'var(--blue-light)',
-  },
-  ctaTitle: {
-    fontSize: 32,
-    fontWeight: 700,
-    color: 'var(--blue-dark)',
-    marginBottom: 16
-  },
-  ctaSub: {
-    fontSize: 16,
-    color: 'var(--blue)',
-    marginBottom: 32
-  },
-  footer: {
-    padding: '40px',
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    background: '#222',
-    color: '#aaa',
-    fontSize: 14
-  },
-  footerLinks: {
-    display: 'flex',
-    gap: 24
+  iconBox: {
+    width: '48px', height: '48px', borderRadius: '12px', display: 'flex', alignItems: 'center',
+    justifyContent: 'center', marginBottom: '24px'
   }
 }
 
-const featuresData = [
-  {
-    icon: '🤖', bg: '#f3e8ff', color: '#9333ea',
-    title: 'AI classification',
-    desc: 'Files are automatically tagged as documents, images, code, spreadsheets, or archives the moment they upload.'
-  },
-  {
-    icon: '📄', bg: '#e0f2fe', color: '#0284c7',
-    title: 'PDF summaries',
-    desc: 'AI reads your PDFs and generates a 2-sentence summary so you know what\'s inside without opening.'
-  },
-  {
-    icon: '🛡️', bg: '#fee2e2', color: '#dc2626',
-    title: 'Virus scanning',
-    desc: 'Every uploaded file is scanned by ClamAV before it reaches your storage. Infected files are blocked instantly.'
-  },
-  {
-    icon: '🔗', bg: '#dcfce7', color: '#16a34a',
-    title: 'Secure sharing',
-    desc: 'Share files with time-limited links (1 hour to 7 days) and granular roles — viewer or editor access.'
-  },
-  {
-    icon: '⏱️', bg: '#fef3c7', color: '#d97706',
-    title: 'Auto file expiry',
-    desc: 'Files auto-delete after 7 days by default. You choose the expiry — or set none — to prevent storage bloat.'
-  },
-  {
-    icon: '🔍', bg: '#e0e7ff', color: '#4f46e5',
-    title: 'Smart search',
-    desc: 'Search by filename, category, or AI-generated keywords. Find what you need in seconds.'
-  }
-]
-
 export default function LandingPage() {
-  const navigate = useNavigate()
-
-  const scrollToFeatures = () => {
-    document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })
-  }
-
   return (
-    <div style={s.page}>
+    <div style={{ background: 'var(--bg-main)', minHeight: '100vh' }}>
       {/* Navigation */}
       <nav style={s.nav}>
-        <div style={s.logoArea} onClick={() => window.scrollTo(0, 0)}>
-          <div style={s.logoIcon}>C</div>
-          <span>Cloudify</span>
+        <div style={s.logo}>
+          <div style={{ width: '32px', height: '32px', background: 'var(--primary)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>C</div>
+          Cloudify
         </div>
         <div style={s.navLinks}>
-          <span 
-            style={s.link} 
-            onClick={scrollToFeatures}
-            onMouseEnter={e => e.target.style.color = 'var(--blue)'}
-            onMouseLeave={e => e.target.style.color = '#555'}
-          >
-            Features
-          </span>
-          <button style={s.btnSecondary} onClick={() => navigate('/login')}>Login</button>
-          <button style={s.btnPrimary} onClick={() => navigate('/register')}>Register</button>
+          <a href="#features" style={s.link}>Features</a>
+          <a href="#pricing" style={s.link}>Pricing</a>
+          <a href="#about" style={s.link}>About</a>
+          <Link to="/login" style={{ ...s.link, marginLeft: '20px' }}>Login</Link>
+          <Link to="/register" style={{ ...s.btnPrimary, padding: '10px 20px', textDecoration: 'none' }}>Register</Link>
         </div>
       </nav>
 
       {/* Hero Section */}
-      <section style={s.hero}>
-        <div style={s.heroBadge}>
-          <span style={{ color: 'var(--blue)' }}>•</span> AI-powered cloud file manager
+      <header style={s.hero} className="animate-fade-up">
+        <div style={{ flex: 1 }}>
+          <div style={s.badge}>
+            <span style={{ fontSize: '14px' }}>✨</span> AI-powered cloud file manager
+          </div>
+          <h1 style={s.title}>Smart storage for <br/><span style={{ color: 'var(--primary)' }}>everything</span> you create</h1>
+          <p style={s.subtitle}>
+            Cloudify automatically organizes, classifies, and secures your files using AI — so you spend less time managing and more time creating.
+          </p>
+          <div style={s.btnGroup}>
+            <Link to="/register" style={{ ...s.btnPrimary, textDecoration: 'none' }}>Start for free</Link>
+            <button style={s.btnSecondary}>See how it works ▷</button>
+          </div>
+          
+          <div style={s.stats}>
+            <div style={s.statItem}>
+              <span style={{ color: 'var(--primary)' }}>☁</span> 5 GB Free Storage
+            </div>
+            <div style={s.statItem}>
+              <span style={{ color: 'var(--primary)' }}>💳</span> No Credit Card
+            </div>
+            <div style={s.statItem}>
+              <span style={{ color: 'var(--primary)' }}>🛡</span> Secure & Private
+            </div>
+          </div>
         </div>
-        <h1 style={s.heroTitle}>
-          Smart storage for <span style={{ color: 'var(--blue)' }}>everything</span> you create
-        </h1>
-        <p style={s.heroSub}>
-          Cloudify automatically organizes, classifies, and secures your files using AI — so you spend less time managing and more time creating.
-        </p>
-        <div style={s.heroBtns}>
-          <button style={s.heroBtnLarge} onClick={() => navigate('/register')}>Start for free</button>
-          <button style={s.heroBtnOutline} onClick={scrollToFeatures}>See how it works ↗</button>
+        <div style={{ flex: 1, position: 'relative' }}>
+          <img 
+            src="/cloud_storage_3d_hero_1777552890269.png" 
+            alt="Cloud Storage" 
+            style={{ width: '100%', maxWidth: '550px', transform: 'scale(1.1)' }} 
+            className="animate-float"
+          />
         </div>
-      </section>
+      </header>
 
       {/* Features Section */}
-      <section id="features" style={s.featuresSection}>
-        <div style={s.featuresTitleSmall}>FEATURES</div>
-        <h2 style={s.featuresTitle}>Everything in one place</h2>
-        <p style={s.featuresSub}>
+      <section id="features" style={s.section}>
+        <div style={{ fontSize: '13px', fontWeight: '700', color: 'var(--primary)', letterSpacing: '1px', marginBottom: '12px' }}>FEATURES</div>
+        <h2 style={{ fontSize: '36px', fontWeight: '800', color: 'var(--text-main)' }}>Everything in one place</h2>
+        <p style={{ color: 'var(--text-muted)', marginTop: '12px', maxWidth: '600px', margin: '12px auto' }}>
           Built for students and teams who need secure, intelligent file management without the complexity.
         </p>
 
         <div style={s.grid}>
-          {featuresData.map((f, i) => (
-            <div key={i} style={s.card}>
-              <div style={{ ...s.cardIconBox, background: f.bg, color: f.color }}>
-                {f.icon}
-              </div>
-              <h3 style={s.cardTitle}>{f.title}</h3>
-              <p style={s.cardText}>{f.desc}</p>
-            </div>
-          ))}
+          <FeatureCard 
+            icon="🤖" color="#EEF2FF" iconColor="#4F46E5"
+            title="AI classification" 
+            desc="Files are automatically tagged as documents, images, code, spreadsheets, or archives the moment they upload." 
+          />
+          <FeatureCard 
+            icon="📄" color="#F0FDF4" iconColor="#16A34A"
+            title="PDF summaries" 
+            desc="AI reads your PDFs and generates a 2-sentence summary so you know what's inside without opening." 
+          />
+          <FeatureCard 
+            icon="🛡" color="#FEF2F2" iconColor="#DC2626"
+            title="Virus scanning" 
+            desc="Every uploaded file is scanned by ClamAV before it reaches your storage. Infected files are blocked instantly." 
+          />
+          <FeatureCard 
+            icon="🔗" color="#F0FDFA" iconColor="#0D9488"
+            title="Secure sharing" 
+            desc="Share files with time-limited links (1 hour to 7 days) and granular roles — viewer or editor access." 
+          />
+          <FeatureCard 
+            icon="⏱" color="#FFFBEB" iconColor="#D97706"
+            title="Auto file expiry" 
+            desc="Files auto-delete after 7 days by default. You choose the expiry — or set none — to prevent storage bloat." 
+          />
+          <FeatureCard 
+            icon="🔍" color="#F5F3FF" iconColor="#7C3AED"
+            title="Smart search" 
+            desc="Search by filename, category, or AI-generated keywords. Find what you need in seconds." 
+          />
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section style={s.ctaSection}>
-        <h2 style={s.ctaTitle}>Ready to try Cloudify?</h2>
-        <p style={s.ctaSub}>
-          Free to use. No credit card. 5 GB of secure cloud storage — ready in 60 seconds.
-        </p>
-        <div style={{ display: 'flex', gap: 16, justifyContent: 'center', marginTop: 24 }}>
-          <button style={s.heroBtnLarge} onClick={() => navigate('/register')}>Create free account</button>
-          <button style={{ ...s.heroBtnOutline, background: '#fff', borderColor: 'transparent' }} onClick={() => navigate('/login')}>Sign in</button>
+      {/* Ready to try section */}
+      <section style={{ ...s.section, background: 'var(--bg-card)', borderTop: '1px solid var(--border-color)' }}>
+        <div style={{ maxWidth: '800px', margin: '0 auto', background: 'var(--primary-light)', padding: '60px', borderRadius: '30px', textAlign: 'left', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div>
+            <h2 style={{ fontSize: '32px', fontWeight: '800', marginBottom: '16px' }}>Ready to try Cloudify?</h2>
+            <p style={{ color: 'var(--text-muted)', marginBottom: '32px' }}>
+              Free to use. No credit card required.<br/>
+              5 GB of secure cloud storage — ready in 60 seconds.
+            </p>
+            <div style={s.btnGroup}>
+              <Link to="/register" style={{ ...s.btnPrimary, textDecoration: 'none' }}>Create free account</Link>
+              <Link to="/login" style={{ ...s.btnSecondary, textDecoration: 'none' }}>Sign in</Link>
+            </div>
+            
+            <div style={{ display: 'flex', gap: '30px', marginTop: '40px', fontSize: '13px', fontWeight: '600', color: 'var(--text-muted)' }}>
+              <span>⚙ AI Powered</span>
+              <span>🛡 100% Secure</span>
+              <span>⚡ Easy to Use</span>
+            </div>
+          </div>
+          <div style={{ width: '200px', height: '200px', background: 'white', borderRadius: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '80px' }}>
+            ☁
+          </div>
         </div>
-        <p style={{ marginTop: 32, fontSize: 13, color: 'var(--blue)' }}>
-          GLA University · Department of CEA · Group No. 10
-        </p>
       </section>
 
       {/* Footer */}
-      <footer style={s.footer}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#fff', fontWeight: 600 }}>
-          <span style={{ color: 'var(--blue)' }}>C</span> Cloudify
+      <footer style={{ padding: '80px 40px', maxWidth: '1200px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', borderTop: '1px solid var(--border-color)' }}>
+        <div style={{ maxWidth: '300px' }}>
+          <div style={{ ...s.logo, marginBottom: '20px' }}>
+            <div style={{ width: '28px', height: '28px', background: 'var(--primary)', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '16px' }}>C</div>
+            Cloudify
+          </div>
+          <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginBottom: '24px' }}>
+            Smart, secure and intelligent cloud storage for everyone.
+          </p>
+          <div style={{ display: 'flex', gap: '20px' }}>
+             <span style={{ fontSize: '20px', cursor: 'pointer' }}>𝕏</span>
+             <span style={{ fontSize: '20px', cursor: 'pointer' }}>in</span>
+             <span style={{ fontSize: '20px', cursor: 'pointer' }}>🐱</span>
+          </div>
         </div>
-        <div style={s.footerLinks}>
-          <span style={{ cursor: 'pointer' }} onClick={scrollToFeatures}>Features</span>
-          <span style={{ cursor: 'pointer' }}>About</span>
-        </div>
-        <div>
-          © 2026 Cloudify · GLA University, Mathura
+
+        <FooterColumn title="Product" links={['Features', 'Pricing', 'About']} />
+        <FooterColumn title="Company" links={['Privacy Policy', 'Terms of Service', 'Contact']} />
+        
+        <div style={{ textAlign: 'right' }}>
+           <p style={{ fontSize: '12px', color: 'var(--text-light)' }}>
+             © 2026 Cloudify - Advanced Cloud Manager
+           </p>
         </div>
       </footer>
+    </div>
+  )
+}
+
+function FeatureCard({ icon, title, desc, color, iconColor }) {
+  return (
+    <div style={s.featureCard} className="card-hover">
+      <div style={{ ...s.iconBox, background: color, color: iconColor, fontSize: '24px' }}>
+        {icon}
+      </div>
+      <h3 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '12px' }}>{title}</h3>
+      <p style={{ fontSize: '14px', color: 'var(--text-muted)', lineHeight: '1.6' }}>{desc}</p>
+    </div>
+  )
+}
+
+function FooterColumn({ title, links }) {
+  return (
+    <div>
+      <h4 style={{ fontSize: '15px', fontWeight: '700', marginBottom: '20px' }}>{title}</h4>
+      <ul style={{ listStyle: 'none' }}>
+        {links.map(l => (
+          <li key={l} style={{ marginBottom: '12px' }}>
+            <a href="#" style={{ fontSize: '14px', color: 'var(--text-muted)' }}>{l}</a>
+          </li>
+        ))}
+      </ul>
     </div>
   )
 }

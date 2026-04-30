@@ -8,6 +8,7 @@ import OTPPage from './pages/OTPPage'
 import Dashboard from './pages/Dashboard'
 import FilePage from './pages/FilePage'
 import LandingPage from './pages/LandingPage'
+import ContactPage from './pages/ContactPage'
 
 function PrivateRoute({ children }) {
   const { isAuth, loading } = useAuth()
@@ -36,6 +37,7 @@ function AppRoutes() {
       <Route path="/verify" element={<OTPPage />} />
       <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
       <Route path="/file/:id" element={<PrivateRoute><FilePage /></PrivateRoute>} />
+      <Route path="/contact" element={<ContactPage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
